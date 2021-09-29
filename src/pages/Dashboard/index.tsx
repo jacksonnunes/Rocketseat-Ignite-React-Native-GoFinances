@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useTheme } from 'styled-components/native';
+import { useAuth } from '../../hooks/auth';
 
 import { currencyFormat } from '../../utils/currencyFormat';
 
@@ -49,14 +50,20 @@ const Dashboard: React.FC = () => {
   const [highlightData, setHighlightData] = useState<HighlightData>({} as HighlightData);
 
   const theme = useTheme();
+  const { user, signOut } = useAuth();
 
   function getLastTransactionDate(
     collection: TransactionListProps[],
     type: 'up' | 'down',
-  ): string {
+  ): string | number {
+    const filtteredCollection = collection.filter(transaction => transaction.type === type);
+
+    if (filtteredCollection.length === 0) {
+      return 0;
+    }
+
     const lastTransaction = new Date(
-      Math.max.apply(Math, collection
-        .filter(transaction => transaction.type === type)
+      Math.max.apply(Math, filtteredCollection
         .map(transaction => new Date(transaction.date).getTime())
       )
     );
@@ -69,7 +76,7 @@ const Dashboard: React.FC = () => {
   }
 
   async function loadTransactions() {
-    const dataKey = '@gofinances:transactions';
+    const dataKey = `@gofinances:transactions_user:${user.id}`;
 
     const response = await AsyncStorage.getItem(dataKey);
 
@@ -108,18 +115,25 @@ const Dashboard: React.FC = () => {
 
     const lastEntryTransaction = getLastTransactionDate(transactionsList, 'up');
     const lastExpenseTransaction = getLastTransactionDate(transactionsList, 'down');
-    const totalInterval = `01 a ${lastExpenseTransaction}`;
+    const totalInterval = lastExpenseTransaction === 0 ? 
+    'Não há movimentações registradas.' :
+    `01 a ${lastExpenseTransaction}`;
 
     const transactionsTotal = entriesTotal - expensesTotal;
 
     setHighlightData({
       entries: {
         amount: currencyFormat(entriesTotal),
-        lastTransaction: `Última entrada dia ${lastEntryTransaction}`,
+        lastTransaction: 
+          lastEntryTransaction === 0 ? 
+          'Sem movimentação registrada.' : 
+          `Última entrada dia ${lastEntryTransaction}`,
       },
       expenses: {
         amount: currencyFormat(expensesTotal),
-        lastTransaction: `Última saída dia ${lastExpenseTransaction}`,
+        lastTransaction: 
+        lastExpenseTransaction === 0 ? 'Sem movimentação registrada.' :
+        `Última saída dia ${lastExpenseTransaction}`,
       },
       total: {
         amount: currencyFormat(transactionsTotal),
@@ -154,15 +168,15 @@ const Dashboard: React.FC = () => {
         <Header>
           <UserWrapper>
             <UserInfo>
-              <Photo source={{ uri: 'https://avatars.githubusercontent.com/u/52105722?v=4' }} />
+              <Photo source={{ uri: user.image }} />
 
               <User>
                 <UserGreeting>Olá,</UserGreeting>
-                <UserName>Jackson</UserName>
+                <UserName>{user.name}</UserName>
               </User>
             </UserInfo>
 
-            <LogoutButton onPress={() => {}}>
+            <LogoutButton onPress={signOut}>
               <Icon name="power" />
             </LogoutButton>
           </UserWrapper>

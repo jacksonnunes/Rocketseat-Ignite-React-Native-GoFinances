@@ -12,6 +12,7 @@ import uuid from 'react-native-uuid';
 
 import { useForm } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../hooks/auth';
 
 import InputForm from '../../components/Form/InputForm';
 import Button from '../../components/Form/Button';
@@ -53,6 +54,8 @@ const Register: React.FC = () => {
     key: 'category',
     name: 'Categoria',
   });
+
+  const { user } = useAuth();
 
   const {
     control,
@@ -96,7 +99,7 @@ const Register: React.FC = () => {
     }
 
     try {
-      const dataKey = '@gofinances:transactions';
+      const dataKey = `@gofinances:transactions_user:${user.id}`;
 
       const data = await AsyncStorage.getItem(dataKey);
 
